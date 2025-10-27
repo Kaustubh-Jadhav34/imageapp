@@ -9,8 +9,8 @@ export class PhotoGallery extends LitElement {
     page: { type: Number },
     pageSize: { type: Number },
     reactions: { type: Object },
-    view: { type: String },         // 'grid' | 'slide'
-    index: { type: Number }         // current slide index
+    view: { type: String }, 
+    index: { type: Number }
   };
 
   static styles = css`
@@ -35,20 +35,33 @@ export class PhotoGallery extends LitElement {
     this.reactions = this.#loadReactions();
     this.view = 'grid';
     this.index = 0;
+    this._io = null;
   }
 
   async firstUpdated() {
-    const res = await fetch('/api/photos.json');
-    const data = await res.json();
-    this.channel = data.channel;
-    this.photos = data.photos || [];
-    this.#appendPage();
-    this.#createSentinel();
-    this.addEventListener('keydown', (e) => {
+    try {
+      const res = await fetch('/api/photos.json');
+      const data = await res.json();
+      this.channel = data.channel;
+      this.photos = data.photos || [];
+      this.#appendPage();
+      await this.updateComplete; 
+      this.#observeIfGrid();
+    } catch (e) {
+      console.error('Failed loading /api/photos.json', e);
+    }
+
+    window.addEventListener('keydown', (e) => {
       if (this.view !== 'slide') return;
       if (e.key === 'ArrowRight') this.#next();
       if (e.key === 'ArrowLeft') this.#prev();
     });
+  }
+
+  updated(changed) {
+    if (changed.has('view') || changed.has('visiblePhotos')) {
+      this.#observeIfGrid();
+    }
   }
 
   render() {
@@ -103,7 +116,9 @@ export class PhotoGallery extends LitElement {
     }
   }
 
-  #createSentinel() {
+  #observeIfGrid() {
+    if (this._io) { this._io.disconnect(); this._io = null; }
+    if (this.view !== 'grid') return;
     const target = this.renderRoot.querySelector('#sentinel');
     if (!target) return;
     this._io = new IntersectionObserver((entries) => {
@@ -116,33 +131,17 @@ export class PhotoGallery extends LitElement {
     try { return JSON.parse(localStorage.getItem('photo-reactions') || '{}'); }
     catch { return {}; }
   }
-
-  #saveReactions() {
-    localStorage.setItem('photo-reactions', JSON.stringify(this.reactions));
-  }
-
-  #setReaction(id, value) {
-    this.reactions = { ...this.reactions, [id]: value };
-    this.#saveReactions();
-    this.requestUpdate();
-  }
+  #saveReactions() { localStorage.setItem('photo-reactions', JSON.stringify(this.reactions)); }
+  #setReaction(id, value) { this.reactions = { ...this.reactions, [id]: value }; this.#saveReactions(); this.requestUpdate(); }
 
   async #sharePhoto(photo) {
-    const shareData = {
-      title: photo.name,
-      text: `${photo.name} — ${this.channel?.name || ''}`,
-      url: window.location.origin + photo.fullSrc
-    };
-    if (navigator.share) {
-      try { await navigator.share(shareData); } catch(e) {}
-    } else {
-      await navigator.clipboard.writeText(shareData.url);
-      alert('Link copied!');
-    }
+    const shareData = { title: photo.name, text: `${photo.name} — ${this.channel?.name || ''}`, url: window.location.origin + photo.fullSrc };
+    if (navigator.share) { try { await navigator.share(shareData); } catch(e) {} }
+    else { await navigator.clipboard.writeText(shareData.url); alert('Link copied!'); }
   }
 
-  #next = () => { this.index = (this.index + 1) % Math.max(this.photos.length, 1); }
-  #prev = () => { this.index = (this.index - 1 + Math.max(this.photos.length, 1)) % Math.max(this.photos.length, 1); }
+  #next = () => { if (this.photos.length) this.index = (this.index + 1) % this.photos.length; }
+  #prev = () => { if (this.photos.length) this.index = (this.index - 1 + this.photos.length) % this.photos.length; }
 }
 
 customElements.define('photo-gallery', PhotoGallery);

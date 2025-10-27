@@ -56,7 +56,6 @@ export class PhotoCard extends LitElement {
     const id = this.photo?.id;
     this.dispatchEvent(new CustomEvent('react', { detail: { id, value }, bubbles: true, composed: true }));
   }
-
   #emitShare() {
     this.dispatchEvent(new CustomEvent('share', { detail: { photo: this.photo }, bubbles: true, composed: true }));
   }
