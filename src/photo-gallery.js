@@ -9,7 +9,7 @@ export class PhotoGallery extends LitElement {
     page: { type: Number },
     pageSize: { type: Number },
     reactions: { type: Object },
-    view: { type: String }, 
+    view: { type: String }, // 'grid' | 'slide'
     index: { type: Number }
   };
 
@@ -45,7 +45,7 @@ export class PhotoGallery extends LitElement {
       this.channel = data.channel;
       this.photos = data.photos || [];
       this.#appendPage();
-      await this.updateComplete; 
+      await this.updateComplete; // ensure sentinel exists
       this.#observeIfGrid();
     } catch (e) {
       console.error('Failed loading /api/photos.json', e);

@@ -27,12 +27,7 @@ export class PhotoCard extends LitElement {
     return html`
       <div class="card">
         <div class="img">
-          <img
-            loading="lazy"
-            src=${p.thumbSrc}
-            alt=${p.name}
-            @click=${() => window.open(p.fullSrc, '_blank', 'noopener')}
-          />
+          <img loading="lazy" src=${p.thumbSrc} alt=${p.name} @click=${() => window.open(p.fullSrc, '_blank', 'noopener')} />
         </div>
         <div class="meta">
           <div class="left">
